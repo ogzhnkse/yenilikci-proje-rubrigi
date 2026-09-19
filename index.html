@@ -53,8 +53,9 @@
   .progress-track{height:5px; border-radius:3px; background:var(--surface-2); overflow:hidden; margin-top:10px;}
   .progress-fill{height:100%; background:var(--primary); border-radius:3px; transition:width .25s ease;}
 
-  .meta-grid{display:grid; grid-template-columns:1fr 1fr 140px; gap:10px; margin-top:12px;}
-  @media (max-width:560px){ .meta-grid{grid-template-columns:1fr;} }
+  .meta-grid{display:grid; grid-template-columns:2fr 1fr 1.6fr 130px; gap:10px; margin-top:12px;}
+  @media (max-width:760px){ .meta-grid{grid-template-columns:1fr 1fr;} }
+  @media (max-width:480px){ .meta-grid{grid-template-columns:1fr;} }
   .field label{display:block; font-size:11px; font-weight:600; color:var(--muted); letter-spacing:.03em; text-transform:uppercase; margin-bottom:4px;}
   .field input{width:100%; padding:9px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--ink); font-size:14px;}
   .field input:focus-visible{outline:2px solid var(--primary); outline-offset:1px;}
@@ -155,8 +156,12 @@
 
       <div class="meta-grid">
         <div class="field">
-          <label for="teamName">Takım Adı</label>
-          <input id="teamName" type="text" placeholder="ör. RoboVista">
+          <label for="studentName">Öğrenci Adı Soyadı</label>
+          <input id="studentName" type="text" placeholder="ör. Ayşe Yılmaz">
+        </div>
+        <div class="field">
+          <label for="studentClass">Sınıf</label>
+          <input id="studentClass" type="text" placeholder="ör. 8/A">
         </div>
         <div class="field">
           <label for="judgeName">Jüri Üyesi</label>
@@ -252,7 +257,7 @@
   var ALL_ITEMS = [];
   CATEGORIES.forEach(function(c){ c.items.forEach(function(it){ ALL_ITEMS.push({ catTitle:c.title, id:it.id, label:it.label }); }); });
   var MAX_SCORE = ALL_ITEMS.length * LEVEL_TAGS.length;
-  var STORAGE_KEY = 'wro-yenilikci-degerlendirmeler-v1';
+  var STORAGE_KEY = 'wro-yenilikci-degerlendirmeler-v2';
 
   var state = { scores:{}, notes:{}, editingId:null };
 
@@ -271,7 +276,8 @@
   var sortByScore = false;
 
   var catsEl = document.getElementById('categories');
-  var teamNameEl = document.getElementById('teamName');
+  var studentNameEl = document.getElementById('studentName');
+  var studentClassEl = document.getElementById('studentClass');
   var judgeNameEl = document.getElementById('judgeName');
   var evalDateEl = document.getElementById('evalDate');
   evalDateEl.value = todayISO();
@@ -338,7 +344,7 @@
 
   function resetForm(keepMeta){
     state = { scores:{}, notes:{}, editingId:null };
-    if(!keepMeta){ teamNameEl.value=''; judgeNameEl.value=''; evalDateEl.value = todayISO(); }
+    if(!keepMeta){ studentNameEl.value=''; studentClassEl.value=''; judgeNameEl.value=''; evalDateEl.value = todayISO(); }
     document.getElementById('editingLabel').textContent = 'Yeni Değerlendirme';
     buildForm();
     updateScore();
@@ -346,10 +352,11 @@
 
   function loadIntoForm(record){
     state = { scores: Object.assign({}, record.scores), notes: Object.assign({}, record.notes||{}), editingId: record.id };
-    teamNameEl.value = record.teamName || '';
+    studentNameEl.value = record.studentName || '';
+    studentClassEl.value = record.studentClass || '';
     judgeNameEl.value = record.judgeName || '';
     evalDateEl.value = record.date || todayISO();
-    document.getElementById('editingLabel').textContent = 'Düzenleniyor: ' + record.teamName;
+    document.getElementById('editingLabel').textContent = 'Düzenleniyor: ' + record.studentName;
     buildForm();
     Object.keys(state.scores).forEach(function(itemId){
       var lv = state.scores[itemId];
@@ -386,7 +393,7 @@
     document.getElementById('savedCount').textContent = savedList.length ? '('+savedList.length+')' : '';
     var wrap = document.getElementById('savedWrap');
     if(!savedList.length){
-      wrap.innerHTML = '<div class="empty-state">Henüz kaydedilmiş değerlendirme yok. Bir takım puanlayıp "Değerlendirmeyi Kaydet" ile buraya ekleyin.</div>';
+      wrap.innerHTML = '<div class="empty-state">Henüz kaydedilmiş değerlendirme yok. Bir öğrenciyi puanlayıp "Değerlendirmeyi Kaydet" ile buraya ekleyin.</div>';
       return;
     }
     var list = savedList.slice();
@@ -395,7 +402,8 @@
 
     var rows = list.map(function(r){
       return '<tr data-id="'+r.id+'">' +
-        '<td class="team-name">'+escapeHtml(r.teamName || '(İsimsiz Takım)')+'</td>' +
+        '<td class="team-name">'+escapeHtml(r.studentName || '(İsimsiz Öğrenci)')+'</td>' +
+        '<td>'+escapeHtml(r.studentClass||'—')+'</td>' +
         '<td>'+escapeHtml(r.judgeName||'—')+'</td>' +
         '<td class="mono">'+escapeHtml(r.date||'')+'</td>' +
         '<td class="mono">'+r.completed+'/'+ALL_ITEMS.length+'</td>' +
@@ -408,7 +416,7 @@
     }).join('');
 
     wrap.innerHTML = '<div class="table-scroll"><table class="saved">' +
-      '<thead><tr><th>Takım</th><th>Jüri</th><th>Tarih</th><th>Tamamlanan</th><th>Puan</th><th></th></tr></thead>' +
+      '<thead><tr><th>Öğrenci</th><th>Sınıf</th><th>Jüri</th><th>Tarih</th><th>Tamamlanan</th><th>Puan</th><th></th></tr></thead>' +
       '<tbody>'+rows+'</tbody></table></div>';
 
     wrap.querySelectorAll('[data-action="edit"]').forEach(function(btn){
@@ -421,7 +429,7 @@
       btn.addEventListener('click', function(){
         var rec = savedList.find(function(x){ return x.id === btn.dataset.id; });
         if(!rec) return;
-        if(confirm('"'+(rec.teamName||'Bu takım')+'" değerlendirmesini silmek istediğinize emin misiniz?')){
+        if(confirm('"'+(rec.studentName||'Bu öğrenci')+'" değerlendirmesini silmek istediğinize emin misiniz?')){
           savedList = savedList.filter(function(x){ return x.id !== rec.id; });
           persistSaved(savedList);
           renderSaved();
@@ -439,8 +447,8 @@
   }
 
   document.getElementById('saveBtn').addEventListener('click', function(){
-    var name = teamNameEl.value.trim();
-    if(!name){ showToast('Lütfen takım adı girin.'); teamNameEl.focus(); return; }
+    var name = studentNameEl.value.trim();
+    if(!name){ showToast('Lütfen öğrenci adı soyadı girin.'); studentNameEl.focus(); return; }
     for(var k=0;k<ALL_ITEMS.length;k++){
       var itId = ALL_ITEMS[k].id;
       if(state.scores[itId] === EXEMPLARY_LEVEL && !(state.notes[itId]||'').trim()){
@@ -452,7 +460,8 @@
     var sc = updateScore();
     var record = {
       id: state.editingId || uid(),
-      teamName: name,
+      studentName: name,
+      studentClass: studentClassEl.value.trim(),
       judgeName: judgeNameEl.value.trim(),
       date: evalDateEl.value || todayISO(),
       scores: Object.assign({}, state.scores),
@@ -484,10 +493,10 @@
 
   document.getElementById('exportBtn').addEventListener('click', function(){
     if(!savedList.length){ showToast('Dışa aktarılacak kayıt yok.'); return; }
-    var header = ['Takım Adı','Jüri Üyesi','Tarih'].concat(ALL_ITEMS.map(function(it){ return it.catTitle+' - '+it.label; })).concat(['Toplam Puan','Notlar']);
+    var header = ['Öğrenci Adı Soyadı','Sınıf','Jüri Üyesi','Tarih'].concat(ALL_ITEMS.map(function(it){ return it.catTitle+' - '+it.label; })).concat(['Toplam Puan','Notlar']);
     var lines = [header.map(csvEscape).join(',')];
     savedList.forEach(function(r){
-      var row = [r.teamName, r.judgeName||'', r.date||''];
+      var row = [r.studentName, r.studentClass||'', r.judgeName||'', r.date||''];
       ALL_ITEMS.forEach(function(it){
         var lv = r.scores[it.id];
         row.push(lv===undefined ? '' : (lv+1));
