@@ -73,8 +73,9 @@
   .item-label .dot{width:6px; height:6px; border-radius:50%; background:var(--border); flex:none;}
   .item-label.done .dot{background:var(--primary);}
 
-  .levels{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
-  @media (max-width:640px){ .levels{grid-template-columns:1fr;} }
+  .levels{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
+  @media (max-width:820px){ .levels{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:480px){ .levels{grid-template-columns:1fr;} }
   .lvl{position:relative;}
   .lvl input{position:absolute; opacity:0; width:1px; height:1px;}
   .lvl label{
@@ -89,9 +90,12 @@
   .lvl[data-lv="0"] .tag{color:var(--level1); background:var(--level1-bg);}
   .lvl[data-lv="1"] .tag{color:var(--level2); background:var(--level2-bg);}
   .lvl[data-lv="2"] .tag{color:var(--level3); background:var(--level3-bg);}
+  .lvl[data-lv="3"] .tag{color:var(--exemplary); background:var(--exemplary-bg);}
+  .lvl[data-lv="3"] label{border-style:dashed;}
   .lvl[data-lv="0"] input:checked + label{border-color:var(--level1); background:var(--level1-bg);}
   .lvl[data-lv="1"] input:checked + label{border-color:var(--level2); background:var(--level2-bg);}
   .lvl[data-lv="2"] input:checked + label{border-color:var(--level3); background:var(--level3-bg);}
+  .lvl[data-lv="3"] input:checked + label{border-style:solid; border-color:var(--exemplary); background:var(--exemplary-bg);}
   .lvl input:checked + label .txt{color:var(--ink);}
 
   .note-wrap{margin-top:10px; padding-top:10px; border-top:1px dashed var(--border);}
@@ -167,7 +171,7 @@
   </header>
 
   <div class="instructions">
-    <strong>Yönerge:</strong> Öğrencilerden aşağıdaki kriterlerin her birinde elde ettikleri başarıyı jüriye göstermeleri beklenir. Her satırda öğrencinin ulaştığı seviyeyi temsil eden bir kutucuğu işaretleyin. Öğrenci beklentileri aşıyorsa (USTACA), yanındaki alana öğrencinin nasıl örnek olduğunu kısaca açıklayın.
+    <strong>Yönerge:</strong> Öğrencilerden aşağıdaki kriterlerin her birinde elde ettikleri başarıyı jüriye göstermeleri beklenir. Her satırda öğrencinin ulaştığı seviyeyi temsil eden bir kutucuğu işaretleyin. Öğrenci USTACA seviyesinin de ötesine geçiyorsa <strong>ÖRNEK OLACAK</strong> seçeneğini işaretleyin ve açılan alana öğrencinin nasıl örnek olduğunu kısaca kendiniz yazın.
   </div>
 
   <div id="categories"></div>
@@ -242,10 +246,12 @@
         'Güçlü göz teması, uygun beden dili, ses tonu ve diksiyon; konuya hakimiyet' ] }
     ]}
   ];
-  var LEVEL_TAGS = ['BAŞLANGIÇ 1','GELİŞİYOR 2','USTACA 3'];
+  var LEVEL_TAGS = ['BAŞLANGIÇ 1','GELİŞİYOR 2','USTACA 3','ÖRNEK OLACAK 4'];
+  var EXEMPLARY_LEVEL = LEVEL_TAGS.length - 1;
+  var EXEMPLARY_TEXT = 'Öğrenci bu kriterde beklentilerin ötesine geçti. Nasıl örnek olduğunu aşağıya yazın.';
   var ALL_ITEMS = [];
   CATEGORIES.forEach(function(c){ c.items.forEach(function(it){ ALL_ITEMS.push({ catTitle:c.title, id:it.id, label:it.label }); }); });
-  var MAX_SCORE = ALL_ITEMS.length * 3;
+  var MAX_SCORE = ALL_ITEMS.length * LEVEL_TAGS.length;
   var STORAGE_KEY = 'wro-yenilikci-degerlendirmeler-v1';
 
   var state = { scores:{}, notes:{}, editingId:null };
@@ -280,16 +286,17 @@
         html += '<div class="item" data-item="'+item.id+'">' +
           '<div class="item-label" id="label-'+item.id+'"><span class="dot"></span>' + item.label + '</div>' +
           '<div class="levels">';
-        item.levels.forEach(function(txt, i){
+        LEVEL_TAGS.forEach(function(tag, i){
           var inputId = 'opt-'+item.id+'-'+i;
+          var txt = item.levels[i] !== undefined ? item.levels[i] : EXEMPLARY_TEXT;
           html += '<div class="lvl" data-lv="'+i+'">' +
             '<input type="radio" name="item-'+item.id+'" id="'+inputId+'" value="'+i+'">' +
-            '<label for="'+inputId+'"><span class="tag">'+LEVEL_TAGS[i]+'</span><span class="txt">'+txt+'</span></label>' +
+            '<label for="'+inputId+'"><span class="tag">'+tag+'</span><span class="txt">'+txt+'</span></label>' +
             '</div>';
         });
         html += '</div>' +
           '<div class="note-wrap" id="note-wrap-'+item.id+'" hidden>' +
-            '<label for="note-'+item.id+'">Öğrencinin nasıl örnek olduğunu açıklayınız</label>' +
+            '<label for="note-'+item.id+'">Öğrencinin nasıl örnek olduğunu açıklayınız *</label>' +
             '<textarea id="note-'+item.id+'" placeholder="Kısa açıklama..."></textarea>' +
           '</div>' +
         '</div>';
@@ -306,7 +313,7 @@
           var lv = parseInt(e.target.value,10);
           state.scores[itemId] = lv;
           var noteWrap = document.getElementById('note-wrap-'+itemId);
-          if(lv === 2){ noteWrap.hidden = false; } else { noteWrap.hidden = true; state.notes[itemId] = ''; document.getElementById('note-'+itemId).value=''; }
+          if(lv === EXEMPLARY_LEVEL){ noteWrap.hidden = false; } else { noteWrap.hidden = true; state.notes[itemId] = ''; document.getElementById('note-'+itemId).value=''; }
           document.getElementById('label-'+itemId).classList.add('done');
           updateScore();
         });
@@ -350,7 +357,7 @@
       if(input){
         input.checked = true;
         document.getElementById('label-'+itemId).classList.add('done');
-        if(lv === 2){
+        if(lv === EXEMPLARY_LEVEL){
           var nw = document.getElementById('note-wrap-'+itemId);
           nw.hidden = false;
           document.getElementById('note-'+itemId).value = state.notes[itemId] || '';
@@ -434,6 +441,14 @@
   document.getElementById('saveBtn').addEventListener('click', function(){
     var name = teamNameEl.value.trim();
     if(!name){ showToast('Lütfen takım adı girin.'); teamNameEl.focus(); return; }
+    for(var k=0;k<ALL_ITEMS.length;k++){
+      var itId = ALL_ITEMS[k].id;
+      if(state.scores[itId] === EXEMPLARY_LEVEL && !(state.notes[itId]||'').trim()){
+        showToast('"ÖRNEK OLACAK" seçilen kriterler için açıklama yazın.');
+        document.getElementById('note-'+itId).focus();
+        return;
+      }
+    }
     var sc = updateScore();
     var record = {
       id: state.editingId || uid(),
@@ -502,6 +517,7 @@
     }
   });
 
+  document.getElementById('scoreDen').textContent = '/ ' + MAX_SCORE;
   buildForm();
   updateScore();
   renderSaved();
