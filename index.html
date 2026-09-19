@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yenilikçi Proje Rubriği</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root{
+    color-scheme: light dark;
+    --bg:#F5F6FB; --surface:#FFFFFF; --surface-2:#EEF1F8; --border:#DDE2F0;
+    --ink:#161A2E; --muted:#5B6178; --primary:#3644B0; --primary-ink:#FFFFFF;
+    --level1:#B23B32; --level1-bg:#FBEAE8;
+    --level2:#B8791E; --level2-bg:#FBF1DE;
+    --level3:#1F8F63; --level3-bg:#E4F5EC;
+    --exemplary:#946200; --exemplary-bg:#FCF3DC;
+    --danger:#B23B32; --shadow: 0 1px 2px rgba(22,26,46,.06), 0 8px 24px -12px rgba(22,26,46,.18);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#10121E; --surface:#181B2C; --surface-2:#1F2338; --border:#2B2F48;
+      --ink:#EDEFFB; --muted:#9BA0BE; --primary:#8791F2; --primary-ink:#12142250;
+      --level1:#E2857B; --level1-bg:#3A2020;
+      --level2:#E8B767; --level2-bg:#3A2E14;
+      --level3:#6FD4A6; --level3-bg:#123227;
+      --exemplary:#E9C46A; --exemplary-bg:#332711;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0; padding:0;}
+  body{background:var(--bg); color:var(--ink); font-family:'Inter',system-ui,sans-serif;}
+  .wrap{max-width:880px; margin:0 auto; padding:0 16px 64px;}
+  .mono{font-family:'IBM Plex Mono',ui-monospace,monospace; font-variant-numeric:tabular-nums;}
+  h1,h2,h3{font-family:'Space Grotesk',system-ui,sans-serif; margin:0; text-wrap:balance;}
+  button{font-family:inherit;}
+
+  header.top{
+    position:sticky; top:0; z-index:10;
+    background:color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border);
+  }
+  .top-inner{max-width:880px; margin:0 auto; padding:14px 16px;}
+  .top-row1{display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+  .eyebrow{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600;}
+  .top-row1 h1{font-size:19px; font-weight:700;}
+  .score-badge{display:flex; align-items:baseline; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:6px 12px; white-space:nowrap;}
+  .score-badge .num{font-size:18px; font-weight:600; color:var(--primary);}
+  .score-badge .den{font-size:13px; color:var(--muted);}
+  .progress-track{height:5px; border-radius:3px; background:var(--surface-2); overflow:hidden; margin-top:10px;}
+  .progress-fill{height:100%; background:var(--primary); border-radius:3px; transition:width .25s ease;}
+
+  .meta-grid{display:grid; grid-template-columns:1fr 1fr 140px; gap:10px; margin-top:12px;}
+  @media (max-width:560px){ .meta-grid{grid-template-columns:1fr;} }
+  .field label{display:block; font-size:11px; font-weight:600; color:var(--muted); letter-spacing:.03em; text-transform:uppercase; margin-bottom:4px;}
+  .field input{width:100%; padding:9px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--ink); font-size:14px;}
+  .field input:focus-visible{outline:2px solid var(--primary); outline-offset:1px;}
+
+  .instructions{margin:20px 0; padding:14px 16px; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; font-size:13.5px; color:var(--muted); line-height:1.55;}
+  .instructions strong{color:var(--ink);}
+
+  section.category{margin-top:28px;}
+  .category-head{margin-bottom:12px;}
+  .category-head .eyebrow{color:var(--primary);}
+  .category-head h2{font-size:16px; font-weight:700; margin-top:2px;}
+  .category-head p{margin:4px 0 0; font-size:13.5px; color:var(--muted); line-height:1.5; max-width:62ch;}
+
+  .item{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:12px; box-shadow:var(--shadow);}
+  .item-label{font-size:13px; font-weight:600; color:var(--ink); margin-bottom:10px; display:flex; align-items:center; gap:8px;}
+  .item-label .dot{width:6px; height:6px; border-radius:50%; background:var(--border); flex:none;}
+  .item-label.done .dot{background:var(--primary);}
+
+  .levels{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+  @media (max-width:640px){ .levels{grid-template-columns:1fr;} }
+  .lvl{position:relative;}
+  .lvl input{position:absolute; opacity:0; width:1px; height:1px;}
+  .lvl label{
+    display:flex; flex-direction:column; gap:4px; height:100%;
+    border:1.5px solid var(--border); border-radius:10px; padding:10px 11px; cursor:pointer;
+    background:var(--surface); transition:border-color .15s, background .15s;
+  }
+  .lvl label:hover{border-color:var(--muted);}
+  .lvl input:focus-visible + label{outline:2px solid var(--primary); outline-offset:2px;}
+  .lvl .tag{font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; width:fit-content; padding:2px 7px; border-radius:999px;}
+  .lvl .txt{font-size:12.5px; line-height:1.45; color:var(--muted);}
+  .lvl[data-lv="0"] .tag{color:var(--level1); background:var(--level1-bg);}
+  .lvl[data-lv="1"] .tag{color:var(--level2); background:var(--level2-bg);}
+  .lvl[data-lv="2"] .tag{color:var(--level3); background:var(--level3-bg);}
+  .lvl[data-lv="0"] input:checked + label{border-color:var(--level1); background:var(--level1-bg);}
+  .lvl[data-lv="1"] input:checked + label{border-color:var(--level2); background:var(--level2-bg);}
+  .lvl[data-lv="2"] input:checked + label{border-color:var(--level3); background:var(--level3-bg);}
+  .lvl input:checked + label .txt{color:var(--ink);}
+
+  .note-wrap{margin-top:10px; padding-top:10px; border-top:1px dashed var(--border);}
+  .note-wrap label{display:block; font-size:11px; font-weight:600; color:var(--exemplary); margin-bottom:5px;}
+  .note-wrap textarea{width:100%; min-height:44px; resize:vertical; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--exemplary-bg); color:var(--ink); font-size:13px; font-family:inherit;}
+
+  .actions{display:flex; gap:10px; margin-top:24px; flex-wrap:wrap;}
+  .btn{border-radius:9px; padding:11px 18px; font-size:14px; font-weight:600; border:1px solid var(--border); background:var(--surface); color:var(--ink); cursor:pointer;}
+  .btn:hover{border-color:var(--muted);}
+  .btn.primary{background:var(--primary); color:var(--primary-ink); border-color:var(--primary);}
+  .btn.primary:hover{opacity:.92;}
+  .btn.ghost{background:transparent;}
+  .btn:disabled{opacity:.5; cursor:not-allowed;}
+  .hint{font-size:12.5px; color:var(--muted); margin-top:8px;}
+
+  .divider{height:1px; background:var(--border); margin:36px 0 22px;}
+
+  .saved-head{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:12px;}
+  .saved-head h2{font-size:16px;}
+  .saved-head .btns{display:flex; gap:8px;}
+  .btn.small{padding:7px 12px; font-size:12.5px;}
+
+  table.saved{width:100%; border-collapse:collapse; font-size:13px;}
+  table.saved th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); padding:0 10px 8px; border-bottom:1px solid var(--border); font-weight:600;}
+  table.saved td{padding:10px; border-bottom:1px solid var(--border); vertical-align:middle;}
+  table.saved tr:last-child td{border-bottom:none;}
+  .team-name{font-weight:600;}
+  .row-score{font-weight:700; color:var(--primary);}
+  .row-btns{display:flex; gap:6px; justify-content:flex-end;}
+  .icon-btn{border:1px solid var(--border); background:var(--surface); border-radius:7px; padding:5px 9px; font-size:12px; cursor:pointer; color:var(--muted);}
+  .icon-btn:hover{color:var(--ink); border-color:var(--muted);}
+  .icon-btn.danger:hover{color:var(--danger); border-color:var(--danger);}
+  .empty-state{padding:28px 16px; text-align:center; color:var(--muted); font-size:13.5px; border:1px dashed var(--border); border-radius:12px;}
+  .table-scroll{overflow-x:auto;}
+  footer.credit{max-width:880px; margin:0 auto; padding:0 16px 32px; font-size:12px; color:var(--muted); text-align:center;}
+  [hidden]{display:none!important;}
+  .toast{position:fixed; bottom:18px; left:50%; transform:translateX(-50%) translateY(12px); background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:9px; font-size:13px; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:50;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="top-inner">
+      <div class="top-row1">
+        <div>
+          <div class="eyebrow" id="editingLabel">Yeni Değerlendirme</div>
+          <h1>Yenilikçi Proje Sunumu Rubriği</h1>
+        </div>
+        <div class="score-badge">
+          <span class="num mono" id="scoreNum">0</span>
+          <span class="den mono" id="scoreDen">/ 24</span>
+        </div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+      <div class="meta-grid">
+        <div class="field">
+          <label for="teamName">Takım Adı</label>
+          <input id="teamName" type="text" placeholder="ör. RoboVista">
+        </div>
+        <div class="field">
+          <label for="judgeName">Jüri Üyesi</label>
+          <input id="judgeName" type="text" placeholder="ör. A. Yılmaz">
+        </div>
+        <div class="field">
+          <label for="evalDate">Tarih</label>
+          <input id="evalDate" type="date">
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="instructions">
+    <strong>Yönerge:</strong> Öğrencilerden aşağıdaki kriterlerin her birinde elde ettikleri başarıyı jüriye göstermeleri beklenir. Her satırda öğrencinin ulaştığı seviyeyi temsil eden bir kutucuğu işaretleyin. Öğrenci beklentileri aşıyorsa (USTACA), yanındaki alana öğrencinin nasıl örnek olduğunu kısaca açıklayın.
+  </div>
+
+  <div id="categories"></div>
+
+  <div class="actions">
+    <button class="btn primary" id="saveBtn">Değerlendirmeyi Kaydet</button>
+    <button class="btn ghost" id="resetBtn">Yeni Değerlendirme</button>
+  </div>
+  <div class="hint" id="completionHint"></div>
+
+  <div class="divider"></div>
+
+  <div class="saved-head">
+    <h2>Kaydedilen Değerlendirmeler <span class="mono" id="savedCount" style="color:var(--muted); font-weight:500; font-size:13px;"></span></h2>
+    <div class="btns">
+      <button class="btn small" id="sortBtn">Puana Göre Sırala</button>
+      <button class="btn small primary" id="exportBtn">CSV Olarak İndir</button>
+    </div>
+  </div>
+  <div id="savedWrap"></div>
+</div>
+
+<footer class="credit">Bu sayfadaki değerlendirmeler yalnızca bu cihazın tarayıcısında saklanır.</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var CATEGORIES = [
+    { id:'tanimlama', title:'TANIMLAMA', desc:'Öğrencinin açık bir problem tanımı var ve iyi bir şekilde araştırılmış.', items:[
+      { id:'t1', label:'Problem Tanımı', levels:[
+        'Problemin tanımı net ve anlaşılır değil',
+        'Problemin tanımı kısmen anlaşılır',
+        'Problem net ve anlaşılır bir şekilde tanımlanmış' ] },
+      { id:'t2', label:'Araştırma', levels:[
+        'Az düzeyde araştırma',
+        'Bir veya birkaç kaynağı içeren kısmi araştırma',
+        'Birden fazla farklı kaynağı içeren detaylı ve net bir araştırma' ] }
+    ]},
+    { id:'tasarlama', title:'TASARLAMA', desc:'Öğrenci, proje planını oluştururken ve fikirlerini geliştirirken etkili çalışmış.', items:[
+      { id:'d1', label:'Proje Planı', levels:[
+        'Verimli bir proje planına ilişkin az kanıt',
+        'Verimli bir proje planına ilişkin kısmi kanıt',
+        'Verimli bir proje planına ilişkin net kanıt' ] },
+      { id:'d2', label:'Tasarım Süreci', levels:[
+        'Tasarım sürecine dair az kanıt',
+        'Tasarım sürecine dair kısmi kanıt',
+        'Tasarım sürecine dair net kanıt' ] }
+    ]},
+    { id:'uretme', title:'ÜRETME', desc:'Öğrenci kendi bulduğu orijinal bir fikri veya mevcut bir fikri temel alarak geliştirdiği çözümü ifade eden bir model/çizim veya prototip oluşturmuş.', items:[
+      { id:'u1', label:'Yenilikçilik Açıklaması', levels:[
+        'Çözümün yenilikçiliğine dair az açıklama',
+        'Çözümün yenilikçiliğine dair basit açıklama',
+        'Çözümün yenilikçiliğine dair detaylı açıklama' ] },
+      { id:'u2', label:'Model / Çizim', levels:[
+        'Çözüme dair net olmayan model/çizim',
+        'Çözüme dair basit model/çizim',
+        'Çözüme dair detaylı model/çizim' ] }
+    ]},
+    { id:'sure', title:'SUNUM SÜRESİ', desc:'Öğrenci belirlenen süreyi etkili ve dengeli kullanmıştır.', items:[
+      { id:'s1', label:'Süre Kullanımı', levels:[
+        'Süreyi etkili kullanamama; sunumu belirlenen sürede tamamlayamama',
+        'Süreyi genel olarak uygun kullanma; bazı bölümlerde zamanlama sorunları',
+        'Belirlenen süreyi etkili kullanma; içeriği dengeli ve zamanında aktarma' ] }
+    ]},
+    { id:'iletisim', title:'İLETİŞİM VE SUNUM BECERİSİ', desc:'Öğrencinin sunum sırasında sergilediği iletişim ve sunum becerilerini etkili bir şekilde kullanmış.', items:[
+      { id:'i1', label:'Sunum Becerisi', levels:[
+        'Sınırlı göz teması ve beden dili; yetersiz ses tonu ve diksiyon, konuya hakimiyette güçlük',
+        'Zaman zaman yetersiz göz teması, beden dili, ses tonu veya diksiyon; kısmi konu hakimiyeti',
+        'Güçlü göz teması, uygun beden dili, ses tonu ve diksiyon; konuya hakimiyet' ] }
+    ]}
+  ];
+  var LEVEL_TAGS = ['BAŞLANGIÇ 1','GELİŞİYOR 2','USTACA 3'];
+  var ALL_ITEMS = [];
+  CATEGORIES.forEach(function(c){ c.items.forEach(function(it){ ALL_ITEMS.push({ catTitle:c.title, id:it.id, label:it.label }); }); });
+  var MAX_SCORE = ALL_ITEMS.length * 3;
+  var STORAGE_KEY = 'wro-yenilikci-degerlendirmeler-v1';
+
+  var state = { scores:{}, notes:{}, editingId:null };
+
+  function todayISO(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function uid(){ try{ return crypto.randomUUID(); }catch(e){ return 'id-'+Date.now()+'-'+Math.random().toString(16).slice(2); } }
+
+  function loadSaved(){
+    try{ var raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : []; }
+    catch(e){ return []; }
+  }
+  function persistSaved(list){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }catch(e){}
+  }
+
+  var savedList = loadSaved();
+  var sortByScore = false;
+
+  var catsEl = document.getElementById('categories');
+  var teamNameEl = document.getElementById('teamName');
+  var judgeNameEl = document.getElementById('judgeName');
+  var evalDateEl = document.getElementById('evalDate');
+  evalDateEl.value = todayISO();
+
+  function buildForm(){
+    var html = '';
+    CATEGORIES.forEach(function(cat){
+      html += '<section class="category"><div class="category-head">' +
+        '<div class="eyebrow">' + cat.title + '</div>' +
+        '<p>' + cat.desc + '</p></div>';
+      cat.items.forEach(function(item){
+        html += '<div class="item" data-item="'+item.id+'">' +
+          '<div class="item-label" id="label-'+item.id+'"><span class="dot"></span>' + item.label + '</div>' +
+          '<div class="levels">';
+        item.levels.forEach(function(txt, i){
+          var inputId = 'opt-'+item.id+'-'+i;
+          html += '<div class="lvl" data-lv="'+i+'">' +
+            '<input type="radio" name="item-'+item.id+'" id="'+inputId+'" value="'+i+'">' +
+            '<label for="'+inputId+'"><span class="tag">'+LEVEL_TAGS[i]+'</span><span class="txt">'+txt+'</span></label>' +
+            '</div>';
+        });
+        html += '</div>' +
+          '<div class="note-wrap" id="note-wrap-'+item.id+'" hidden>' +
+            '<label for="note-'+item.id+'">Öğrencinin nasıl örnek olduğunu açıklayınız</label>' +
+            '<textarea id="note-'+item.id+'" placeholder="Kısa açıklama..."></textarea>' +
+          '</div>' +
+        '</div>';
+      });
+      html += '</section>';
+    });
+    catsEl.innerHTML = html;
+
+    ALL_ITEMS.forEach(function(it){
+      var group = document.getElementsByName('item-'+it.id);
+      for(var i=0;i<group.length;i++){
+        group[i].addEventListener('change', function(e){
+          var itemId = e.target.name.replace('item-','');
+          var lv = parseInt(e.target.value,10);
+          state.scores[itemId] = lv;
+          var noteWrap = document.getElementById('note-wrap-'+itemId);
+          if(lv === 2){ noteWrap.hidden = false; } else { noteWrap.hidden = true; state.notes[itemId] = ''; document.getElementById('note-'+itemId).value=''; }
+          document.getElementById('label-'+itemId).classList.add('done');
+          updateScore();
+        });
+      }
+      document.getElementById('note-'+it.id).addEventListener('input', function(e){
+        state.notes[it.id] = e.target.value;
+      });
+    });
+  }
+
+  function updateScore(){
+    var total = 0, completed = 0;
+    ALL_ITEMS.forEach(function(it){
+      if(state.scores[it.id] !== undefined){ total += (state.scores[it.id]+1); completed++; }
+    });
+    document.getElementById('scoreNum').textContent = total;
+    document.getElementById('progressFill').style.width = (MAX_SCORE ? (total/MAX_SCORE*100) : 0) + '%';
+    var hint = document.getElementById('completionHint');
+    hint.textContent = completed + ' / ' + ALL_ITEMS.length + ' kriter değerlendirildi.';
+    return { total: total, completed: completed };
+  }
+
+  function resetForm(keepMeta){
+    state = { scores:{}, notes:{}, editingId:null };
+    if(!keepMeta){ teamNameEl.value=''; judgeNameEl.value=''; evalDateEl.value = todayISO(); }
+    document.getElementById('editingLabel').textContent = 'Yeni Değerlendirme';
+    buildForm();
+    updateScore();
+  }
+
+  function loadIntoForm(record){
+    state = { scores: Object.assign({}, record.scores), notes: Object.assign({}, record.notes||{}), editingId: record.id };
+    teamNameEl.value = record.teamName || '';
+    judgeNameEl.value = record.judgeName || '';
+    evalDateEl.value = record.date || todayISO();
+    document.getElementById('editingLabel').textContent = 'Düzenleniyor: ' + record.teamName;
+    buildForm();
+    Object.keys(state.scores).forEach(function(itemId){
+      var lv = state.scores[itemId];
+      var input = document.getElementById('opt-'+itemId+'-'+lv);
+      if(input){
+        input.checked = true;
+        document.getElementById('label-'+itemId).classList.add('done');
+        if(lv === 2){
+          var nw = document.getElementById('note-wrap-'+itemId);
+          nw.hidden = false;
+          document.getElementById('note-'+itemId).value = state.notes[itemId] || '';
+        }
+      }
+    });
+    updateScore();
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  function showToast(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(showToast._tm);
+    showToast._tm = setTimeout(function(){ t.classList.remove('show'); }, 2200);
+  }
+
+  function csvEscape(v){
+    v = (v===undefined||v===null) ? '' : String(v);
+    if(/[",\n]/.test(v)) return '"' + v.replace(/"/g,'""') + '"';
+    return v;
+  }
+
+  function renderSaved(){
+    document.getElementById('savedCount').textContent = savedList.length ? '('+savedList.length+')' : '';
+    var wrap = document.getElementById('savedWrap');
+    if(!savedList.length){
+      wrap.innerHTML = '<div class="empty-state">Henüz kaydedilmiş değerlendirme yok. Bir takım puanlayıp "Değerlendirmeyi Kaydet" ile buraya ekleyin.</div>';
+      return;
+    }
+    var list = savedList.slice();
+    if(sortByScore){ list.sort(function(a,b){ return b.total - a.total; }); }
+    else { list.sort(function(a,b){ return b.savedAt - a.savedAt; }); }
+
+    var rows = list.map(function(r){
+      return '<tr data-id="'+r.id+'">' +
+        '<td class="team-name">'+escapeHtml(r.teamName || '(İsimsiz Takım)')+'</td>' +
+        '<td>'+escapeHtml(r.judgeName||'—')+'</td>' +
+        '<td class="mono">'+escapeHtml(r.date||'')+'</td>' +
+        '<td class="mono">'+r.completed+'/'+ALL_ITEMS.length+'</td>' +
+        '<td class="row-score mono">'+r.total+' / '+MAX_SCORE+'</td>' +
+        '<td><div class="row-btns">' +
+          '<button class="icon-btn" data-action="edit" data-id="'+r.id+'">Düzenle</button>' +
+          '<button class="icon-btn danger" data-action="delete" data-id="'+r.id+'">Sil</button>' +
+        '</div></td>' +
+      '</tr>';
+    }).join('');
+
+    wrap.innerHTML = '<div class="table-scroll"><table class="saved">' +
+      '<thead><tr><th>Takım</th><th>Jüri</th><th>Tarih</th><th>Tamamlanan</th><th>Puan</th><th></th></tr></thead>' +
+      '<tbody>'+rows+'</tbody></table></div>';
+
+    wrap.querySelectorAll('[data-action="edit"]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var rec = savedList.find(function(x){ return x.id === btn.dataset.id; });
+        if(rec) loadIntoForm(rec);
+      });
+    });
+    wrap.querySelectorAll('[data-action="delete"]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var rec = savedList.find(function(x){ return x.id === btn.dataset.id; });
+        if(!rec) return;
+        if(confirm('"'+(rec.teamName||'Bu takım')+'" değerlendirmesini silmek istediğinize emin misiniz?')){
+          savedList = savedList.filter(function(x){ return x.id !== rec.id; });
+          persistSaved(savedList);
+          renderSaved();
+          if(state.editingId === rec.id) resetForm();
+          showToast('Değerlendirme silindi.');
+        }
+      });
+    });
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  document.getElementById('saveBtn').addEventListener('click', function(){
+    var name = teamNameEl.value.trim();
+    if(!name){ showToast('Lütfen takım adı girin.'); teamNameEl.focus(); return; }
+    var sc = updateScore();
+    var record = {
+      id: state.editingId || uid(),
+      teamName: name,
+      judgeName: judgeNameEl.value.trim(),
+      date: evalDateEl.value || todayISO(),
+      scores: Object.assign({}, state.scores),
+      notes: Object.assign({}, state.notes),
+      total: sc.total,
+      completed: sc.completed,
+      savedAt: Date.now()
+    };
+    if(state.editingId){
+      savedList = savedList.map(function(r){ return r.id === record.id ? record : r; });
+    } else {
+      savedList.push(record);
+    }
+    persistSaved(savedList);
+    renderSaved();
+    showToast(state.editingId ? 'Değerlendirme güncellendi.' : 'Değerlendirme kaydedildi.');
+    resetForm();
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', function(){
+    resetForm();
+  });
+
+  document.getElementById('sortBtn').addEventListener('click', function(){
+    sortByScore = !sortByScore;
+    document.getElementById('sortBtn').textContent = sortByScore ? 'Kayıt Sırasına Göre' : 'Puana Göre Sırala';
+    renderSaved();
+  });
+
+  document.getElementById('exportBtn').addEventListener('click', function(){
+    if(!savedList.length){ showToast('Dışa aktarılacak kayıt yok.'); return; }
+    var header = ['Takım Adı','Jüri Üyesi','Tarih'].concat(ALL_ITEMS.map(function(it){ return it.catTitle+' - '+it.label; })).concat(['Toplam Puan','Notlar']);
+    var lines = [header.map(csvEscape).join(',')];
+    savedList.forEach(function(r){
+      var row = [r.teamName, r.judgeName||'', r.date||''];
+      ALL_ITEMS.forEach(function(it){
+        var lv = r.scores[it.id];
+        row.push(lv===undefined ? '' : (lv+1));
+      });
+      row.push(r.total);
+      var noteParts = [];
+      Object.keys(r.notes||{}).forEach(function(k){
+        if(r.notes[k]) noteParts.push(k+': '+r.notes[k]);
+      });
+      row.push(noteParts.join(' | '));
+      lines.push(row.map(csvEscape).join(','));
+    });
+    var csv = '﻿' + lines.join('\r\n');
+    try{
+      var blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'yenilikci-proje-degerlendirmeleri.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+      showToast('CSV indirildi.');
+    }catch(err){
+      showToast('İndirme başarısız oldu.');
+    }
+  });
+
+  buildForm();
+  updateScore();
+  renderSaved();
+})();
+</script>
+</body>
+</html>
