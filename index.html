@@ -149,7 +149,7 @@
         </div>
         <div class="score-badge">
           <span class="num mono" id="scoreNum">0</span>
-          <span class="den mono" id="scoreDen">/ 24</span>
+          <span class="den mono" id="scoreDen">/ 100</span>
         </div>
       </div>
       <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
@@ -257,6 +257,7 @@
   var ALL_ITEMS = [];
   CATEGORIES.forEach(function(c){ c.items.forEach(function(it){ ALL_ITEMS.push({ catTitle:c.title, id:it.id, label:it.label }); }); });
   var MAX_SCORE = ALL_ITEMS.length * LEVEL_TAGS.length;
+  function toPercent(total){ return MAX_SCORE ? Math.round((total/MAX_SCORE)*100) : 0; }
   var STORAGE_KEY = 'wro-yenilikci-degerlendirmeler-v2';
 
   var state = { scores:{}, notes:{}, editingId:null };
@@ -335,8 +336,9 @@
     ALL_ITEMS.forEach(function(it){
       if(state.scores[it.id] !== undefined){ total += (state.scores[it.id]+1); completed++; }
     });
-    document.getElementById('scoreNum').textContent = total;
-    document.getElementById('progressFill').style.width = (MAX_SCORE ? (total/MAX_SCORE*100) : 0) + '%';
+    var percent = toPercent(total);
+    document.getElementById('scoreNum').textContent = percent;
+    document.getElementById('progressFill').style.width = percent + '%';
     var hint = document.getElementById('completionHint');
     hint.textContent = completed + ' / ' + ALL_ITEMS.length + ' kriter değerlendirildi.';
     return { total: total, completed: completed };
@@ -407,7 +409,7 @@
         '<td>'+escapeHtml(r.judgeName||'—')+'</td>' +
         '<td class="mono">'+escapeHtml(r.date||'')+'</td>' +
         '<td class="mono">'+r.completed+'/'+ALL_ITEMS.length+'</td>' +
-        '<td class="row-score mono">'+r.total+' / '+MAX_SCORE+'</td>' +
+        '<td class="row-score mono">'+toPercent(r.total)+' / 100</td>' +
         '<td><div class="row-btns">' +
           '<button class="icon-btn" data-action="edit" data-id="'+r.id+'">Düzenle</button>' +
           '<button class="icon-btn danger" data-action="delete" data-id="'+r.id+'">Sil</button>' +
@@ -493,7 +495,7 @@
 
   document.getElementById('exportBtn').addEventListener('click', function(){
     if(!savedList.length){ showToast('Dışa aktarılacak kayıt yok.'); return; }
-    var header = ['Öğrenci Adı Soyadı','Sınıf','Jüri Üyesi','Tarih'].concat(ALL_ITEMS.map(function(it){ return it.catTitle+' - '+it.label; })).concat(['Toplam Puan','Notlar']);
+    var header = ['Öğrenci Adı Soyadı','Sınıf','Jüri Üyesi','Tarih'].concat(ALL_ITEMS.map(function(it){ return it.catTitle+' - '+it.label; })).concat(['Puan (100 üzerinden)','Notlar']);
     var lines = [header.map(csvEscape).join(',')];
     savedList.forEach(function(r){
       var row = [r.studentName, r.studentClass||'', r.judgeName||'', r.date||''];
@@ -501,7 +503,7 @@
         var lv = r.scores[it.id];
         row.push(lv===undefined ? '' : (lv+1));
       });
-      row.push(r.total);
+      row.push(toPercent(r.total));
       var noteParts = [];
       Object.keys(r.notes||{}).forEach(function(k){
         if(r.notes[k]) noteParts.push(k+': '+r.notes[k]);
@@ -526,7 +528,6 @@
     }
   });
 
-  document.getElementById('scoreDen').textContent = '/ ' + MAX_SCORE;
   buildForm();
   updateScore();
   renderSaved();
