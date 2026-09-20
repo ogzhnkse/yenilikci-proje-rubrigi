@@ -190,16 +190,18 @@
   <div class="divider"></div>
 
   <div class="saved-head">
-    <h2>Kaydedilen Değerlendirmeler <span class="mono" id="savedCount" style="color:var(--muted); font-weight:500; font-size:13px;"></span></h2>
+    <h2>Tüm Sonuçlar (Ortak) <span class="mono" id="savedCount" style="color:var(--muted); font-weight:500; font-size:13px;"></span></h2>
     <div class="btns">
+      <button class="btn small" id="refreshBtn">Yenile</button>
       <button class="btn small" id="sortBtn">Puana Göre Sırala</button>
       <button class="btn small primary" id="exportBtn">CSV Olarak İndir</button>
     </div>
   </div>
+  <div class="hint" id="syncHint" style="margin-top:0; margin-bottom:12px;"></div>
   <div id="savedWrap"></div>
 </div>
 
-<footer class="credit">Değerlendirmeler bu cihazda saklanır ve ayrıca ortak sonuç tablosuna gönderilir.</footer>
+<footer class="credit">Değerlendirmeler ortak sonuç tablosuna kaydedilir; aşağıdaki liste tüm cihazlardan gelen sonuçları gösterir.</footer>
 
 <div class="toast" id="toast"></div>
 
@@ -261,7 +263,7 @@
   var STORAGE_KEY = 'wro-yenilikci-degerlendirmeler-v2';
   var SHEET_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzdtEDVRBcX4SFhfmTjaKpJoaqEsvqoYmd4VB8VArGbU1u45kVdkJGiyCqJ8GQQSrDDMw/exec';
 
-  var state = { scores:{}, notes:{}, editingId:null };
+  var state = { scores:{}, notes:{} };
 
   function todayISO(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
   function uid(){ try{ return crypto.randomUUID(); }catch(e){ return 'id-'+Date.now()+'-'+Math.random().toString(16).slice(2); } }
@@ -346,36 +348,10 @@
   }
 
   function resetForm(keepMeta){
-    state = { scores:{}, notes:{}, editingId:null };
+    state = { scores:{}, notes:{} };
     if(!keepMeta){ studentNameEl.value=''; studentClassEl.value=''; judgeNameEl.value=''; evalDateEl.value = todayISO(); }
-    document.getElementById('editingLabel').textContent = 'Yeni Değerlendirme';
     buildForm();
     updateScore();
-  }
-
-  function loadIntoForm(record){
-    state = { scores: Object.assign({}, record.scores), notes: Object.assign({}, record.notes||{}), editingId: record.id };
-    studentNameEl.value = record.studentName || '';
-    studentClassEl.value = record.studentClass || '';
-    judgeNameEl.value = record.judgeName || '';
-    evalDateEl.value = record.date || todayISO();
-    document.getElementById('editingLabel').textContent = 'Düzenleniyor: ' + record.studentName;
-    buildForm();
-    Object.keys(state.scores).forEach(function(itemId){
-      var lv = state.scores[itemId];
-      var input = document.getElementById('opt-'+itemId+'-'+lv);
-      if(input){
-        input.checked = true;
-        document.getElementById('label-'+itemId).classList.add('done');
-        if(lv === EXEMPLARY_LEVEL){
-          var nw = document.getElementById('note-wrap-'+itemId);
-          nw.hidden = false;
-          document.getElementById('note-'+itemId).value = state.notes[itemId] || '';
-        }
-      }
-    });
-    updateScore();
-    window.scrollTo({top:0, behavior:'smooth'});
   }
 
   function showToast(msg){
@@ -392,55 +368,84 @@
     return v;
   }
 
+  var sharedRows = null;
+  var sharedLoading = false;
+
+  function loadShared(){
+    if(!SHEET_WEBAPP_URL || sharedLoading) return;
+    sharedLoading = true;
+    var syncHint = document.getElementById('syncHint');
+    syncHint.textContent = 'Ortak sonuçlar yükleniyor...';
+    fetch(SHEET_WEBAPP_URL)
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        sharedRows = data.rows || [];
+        syncHint.textContent = '';
+        sharedLoading = false;
+        renderSaved();
+      })
+      .catch(function(){
+        syncHint.textContent = 'Ortak sonuçlar yüklenemedi (bu cihazın kayıtları aşağıda gösteriliyor). "Yenile" ile tekrar deneyin.';
+        sharedLoading = false;
+        renderSaved();
+      });
+  }
+
+  function rowCompleted(row){
+    var n = 0;
+    for(var i=0;i<ALL_ITEMS.length;i++){ if(row[4+i] !== '' && row[4+i] !== undefined && row[4+i] !== null) n++; }
+    return n;
+  }
+
+  function getDisplayRows(){
+    if(sharedRows === null) return null;
+    if(sharedRows.length) return sharedRows;
+    return savedList.map(function(r){
+      var row = [r.studentName, r.studentClass||'', r.judgeName||'', r.date||''];
+      ALL_ITEMS.forEach(function(it){ var lv=r.scores[it.id]; row.push(lv===undefined?'':(lv+1)); });
+      row.push(toPercent(r.total));
+      row.push('');
+      return row;
+    });
+  }
+
   function renderSaved(){
-    document.getElementById('savedCount').textContent = savedList.length ? '('+savedList.length+')' : '';
     var wrap = document.getElementById('savedWrap');
-    if(!savedList.length){
+    var source = getDisplayRows();
+
+    if(source === null){
+      document.getElementById('savedCount').textContent = '';
+      wrap.innerHTML = '<div class="empty-state">Yükleniyor...</div>';
+      return;
+    }
+
+    document.getElementById('savedCount').textContent = source.length ? '('+source.length+')' : '';
+    if(!source.length){
       wrap.innerHTML = '<div class="empty-state">Henüz kaydedilmiş değerlendirme yok. Bir öğrenciyi puanlayıp "Değerlendirmeyi Kaydet" ile buraya ekleyin.</div>';
       return;
     }
-    var list = savedList.slice();
-    if(sortByScore){ list.sort(function(a,b){ return b.total - a.total; }); }
-    else { list.sort(function(a,b){ return b.savedAt - a.savedAt; }); }
 
-    var rows = list.map(function(r){
-      return '<tr data-id="'+r.id+'">' +
-        '<td class="team-name">'+escapeHtml(r.studentName || '(İsimsiz Öğrenci)')+'</td>' +
-        '<td>'+escapeHtml(r.studentClass||'—')+'</td>' +
-        '<td>'+escapeHtml(r.judgeName||'—')+'</td>' +
-        '<td class="mono">'+escapeHtml(r.date||'')+'</td>' +
-        '<td class="mono">'+r.completed+'/'+ALL_ITEMS.length+'</td>' +
-        '<td class="row-score mono">'+toPercent(r.total)+' / 100</td>' +
-        '<td><div class="row-btns">' +
-          '<button class="icon-btn" data-action="edit" data-id="'+r.id+'">Düzenle</button>' +
-          '<button class="icon-btn danger" data-action="delete" data-id="'+r.id+'">Sil</button>' +
-        '</div></td>' +
+    var list = source.slice();
+    var idxs = list.map(function(_,i){ return i; });
+    if(sortByScore){ idxs.sort(function(a,b){ return (parseFloat(list[b][12])||0) - (parseFloat(list[a][12])||0); }); }
+    else { idxs.reverse(); }
+
+    var rows = idxs.map(function(i){
+      var r = list[i];
+      var puan = parseFloat(r[12]);
+      return '<tr>' +
+        '<td class="team-name">'+escapeHtml(r[0] || '(İsimsiz Öğrenci)')+'</td>' +
+        '<td>'+escapeHtml(r[1]||'—')+'</td>' +
+        '<td>'+escapeHtml(r[2]||'—')+'</td>' +
+        '<td class="mono">'+escapeHtml(String(r[3]||'').slice(0,10))+'</td>' +
+        '<td class="mono">'+rowCompleted(r)+'/'+ALL_ITEMS.length+'</td>' +
+        '<td class="row-score mono">'+(isNaN(puan)?'—':puan)+' / 100</td>' +
       '</tr>';
     }).join('');
 
     wrap.innerHTML = '<div class="table-scroll"><table class="saved">' +
-      '<thead><tr><th>Öğrenci</th><th>Sınıf</th><th>Jüri</th><th>Tarih</th><th>Tamamlanan</th><th>Puan</th><th></th></tr></thead>' +
+      '<thead><tr><th>Öğrenci</th><th>Sınıf</th><th>Jüri</th><th>Tarih</th><th>Tamamlanan</th><th>Puan</th></tr></thead>' +
       '<tbody>'+rows+'</tbody></table></div>';
-
-    wrap.querySelectorAll('[data-action="edit"]').forEach(function(btn){
-      btn.addEventListener('click', function(){
-        var rec = savedList.find(function(x){ return x.id === btn.dataset.id; });
-        if(rec) loadIntoForm(rec);
-      });
-    });
-    wrap.querySelectorAll('[data-action="delete"]').forEach(function(btn){
-      btn.addEventListener('click', function(){
-        var rec = savedList.find(function(x){ return x.id === btn.dataset.id; });
-        if(!rec) return;
-        if(confirm('"'+(rec.studentName||'Bu öğrenci')+'" değerlendirmesini silmek istediğinize emin misiniz?')){
-          savedList = savedList.filter(function(x){ return x.id !== rec.id; });
-          persistSaved(savedList);
-          renderSaved();
-          if(state.editingId === rec.id) resetForm();
-          showToast('Değerlendirme silindi.');
-        }
-      });
-    });
   }
 
   function escapeHtml(s){
@@ -488,7 +493,7 @@
     }
     var sc = updateScore();
     var record = {
-      id: state.editingId || uid(),
+      id: uid(),
       studentName: name,
       studentClass: studentClassEl.value.trim(),
       judgeName: judgeNameEl.value.trim(),
@@ -499,20 +504,20 @@
       completed: sc.completed,
       savedAt: Date.now()
     };
-    if(state.editingId){
-      savedList = savedList.map(function(r){ return r.id === record.id ? record : r; });
-    } else {
-      savedList.push(record);
-    }
+    savedList.push(record);
     persistSaved(savedList);
     sendToSheet(record);
-    renderSaved();
-    showToast(state.editingId ? 'Değerlendirme güncellendi.' : 'Değerlendirme kaydedildi.');
+    showToast('Değerlendirme kaydedildi ve ortak tabloya gönderildi.');
     resetForm();
+    setTimeout(loadShared, 1500);
   });
 
   document.getElementById('resetBtn').addEventListener('click', function(){
     resetForm();
+  });
+
+  document.getElementById('refreshBtn').addEventListener('click', function(){
+    loadShared();
   });
 
   document.getElementById('sortBtn').addEventListener('click', function(){
@@ -522,21 +527,11 @@
   });
 
   document.getElementById('exportBtn').addEventListener('click', function(){
-    if(!savedList.length){ showToast('Dışa aktarılacak kayıt yok.'); return; }
+    var source = getDisplayRows();
+    if(!source || !source.length){ showToast('Dışa aktarılacak kayıt yok.'); return; }
     var header = ['Öğrenci Adı Soyadı','Sınıf','Jüri Üyesi','Tarih'].concat(ALL_ITEMS.map(function(it){ return it.catTitle+' - '+it.label; })).concat(['Puan (100 üzerinden)','Notlar']);
     var lines = [header.map(csvEscape).join(',')];
-    savedList.forEach(function(r){
-      var row = [r.studentName, r.studentClass||'', r.judgeName||'', r.date||''];
-      ALL_ITEMS.forEach(function(it){
-        var lv = r.scores[it.id];
-        row.push(lv===undefined ? '' : (lv+1));
-      });
-      row.push(toPercent(r.total));
-      var noteParts = [];
-      Object.keys(r.notes||{}).forEach(function(k){
-        if(r.notes[k]) noteParts.push(k+': '+r.notes[k]);
-      });
-      row.push(noteParts.join(' | '));
+    source.forEach(function(row){
       lines.push(row.map(csvEscape).join(','));
     });
     var csv = '﻿' + lines.join('\r\n');
@@ -559,6 +554,7 @@
   buildForm();
   updateScore();
   renderSaved();
+  loadShared();
 })();
 </script>
 </body>
