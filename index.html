@@ -199,7 +199,7 @@
   <div id="savedWrap"></div>
 </div>
 
-<footer class="credit">Bu sayfadaki değerlendirmeler yalnızca bu cihazın tarayıcısında saklanır.</footer>
+<footer class="credit">Değerlendirmeler bu cihazda saklanır ve ayrıca ortak sonuç tablosuna gönderilir.</footer>
 
 <div class="toast" id="toast"></div>
 
@@ -259,6 +259,7 @@
   var MAX_SCORE = ALL_ITEMS.length * LEVEL_TAGS.length;
   function toPercent(total){ return MAX_SCORE ? Math.round((total/MAX_SCORE)*100) : 0; }
   var STORAGE_KEY = 'wro-yenilikci-degerlendirmeler-v2';
+  var SHEET_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzdtEDVRBcX4SFhfmTjaKpJoaqEsvqoYmd4VB8VArGbU1u45kVdkJGiyCqJ8GQQSrDDMw/exec';
 
   var state = { scores:{}, notes:{}, editingId:null };
 
@@ -448,6 +449,32 @@
     });
   }
 
+  function buildSheetPayload(record){
+    var header = ['Öğrenci Adı Soyadı','Sınıf','Jüri Üyesi','Tarih'].concat(ALL_ITEMS.map(function(it){ return it.catTitle+' - '+it.label; })).concat(['Puan (100 üzerinden)','Notlar']);
+    var row = [record.studentName, record.studentClass||'', record.judgeName||'', record.date||''];
+    ALL_ITEMS.forEach(function(it){
+      var lv = record.scores[it.id];
+      row.push(lv===undefined ? '' : (lv+1));
+    });
+    row.push(toPercent(record.total));
+    var noteParts = [];
+    Object.keys(record.notes||{}).forEach(function(k){ if(record.notes[k]) noteParts.push(k+': '+record.notes[k]); });
+    row.push(noteParts.join(' | '));
+    return { header: header, row: row };
+  }
+
+  function sendToSheet(record){
+    if(!SHEET_WEBAPP_URL) return;
+    try{
+      fetch(SHEET_WEBAPP_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(buildSheetPayload(record))
+      }).catch(function(){});
+    }catch(e){}
+  }
+
   document.getElementById('saveBtn').addEventListener('click', function(){
     var name = studentNameEl.value.trim();
     if(!name){ showToast('Lütfen öğrenci adı soyadı girin.'); studentNameEl.focus(); return; }
@@ -478,6 +505,7 @@
       savedList.push(record);
     }
     persistSaved(savedList);
+    sendToSheet(record);
     renderSaved();
     showToast(state.editingId ? 'Değerlendirme güncellendi.' : 'Değerlendirme kaydedildi.');
     resetForm();
